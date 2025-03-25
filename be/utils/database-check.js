@@ -1,5 +1,6 @@
 import sequelize from '../config/database.js';
 import { Note } from '../models/index.js';
+import { fileURLToPath } from 'url';
 
 /**
  * Check database connection and table structure

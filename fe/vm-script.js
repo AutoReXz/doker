@@ -1,29 +1,91 @@
-// Base URL for our API - use current hostname instead of hardcoded localhost
-const API_URL = `${window.location.protocol}//${window.location.host}/api`;
-
-// Global state to store notes
+// Global variables for state management
+let API_URL = ''; // Will be set from utils.js
 let allNotes = [];
 let currentCategory = 'all';
 let currentView = 'grid'; // grid or list
+let connectionAttempts = 0;
 
 // Document ready function
 $(document).ready(function() {
-    // Load all notes when page loads
-    getListNotes();
-
-    // Attach event listeners
-    setupEventListeners();
+    // Initialize API_URL from utils
+    API_URL = API_CONFIG.getApiUrl();
     
-    // Setup sidebar toggle for mobile
+    // Auto connect with a slight delay
+    setTimeout(() => {
+        connectToBackend();
+    }, 500);
+
+    // Setup event listeners
+    setupEventListeners();
     setupSidebar();
 });
+
+/**
+ * Connect to the backend API
+ */
+function connectToBackend() {
+    // Show loading
+    $('#notesList').html(`
+        <div class="flex items-center justify-center col-span-full py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+    `);
+    
+    // Test connection and load notes
+    testConnection()
+        .then(() => {
+            // Load notes
+            getListNotes();
+            // Update status
+            $('#connectionStatus').text('Connected').removeClass('text-red-400').addClass('text-green-400');
+            // Reset connection attempts
+            connectionAttempts = 0;
+        })
+        .catch(err => {
+            connectionAttempts++;
+            console.error('Connection failed:', err);
+            if (connectionAttempts < 3) {
+                showToast(`Connection failed. Retrying (${connectionAttempts}/3)...`, 'error');
+                setTimeout(connectToBackend, 1000);
+            } else {
+                showToast('Could not connect to backend. Please check the backend server.', 'error');
+                $('#connectionStatus').text('Disconnected').removeClass('text-green-400').addClass('text-red-400');
+                $('#notesList').html(`
+                    <div class="col-span-full p-8 bg-red-50 rounded-lg border border-red-200 text-center">
+                        <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-4"></i>
+                        <h3 class="text-xl font-bold text-red-700 mb-2">Connection Failed</h3>
+                        <p class="text-red-600 mb-4">Could not connect to backend server at ${API_URL}.</p>
+                        <p class="text-red-600 mb-4">Make sure your backend server is running and accessible.</p>
+                        <button id="retryConnection" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+                            Retry Connection
+                        </button>
+                    </div>
+                `);
+                $('#retryConnection').on('click', () => {
+                    connectionAttempts = 0;
+                    connectToBackend();
+                });
+            }
+        });
+}
+
+/**
+ * Test connection to the backend
+ */
+function testConnection() {
+    return $.ajax({
+        url: `${API_URL}/notes`,
+        method: 'GET',
+        timeout: 5000,
+    });
+}
 
 /**
  * Attach all event listeners
  */
 function setupEventListeners() {
     // New note buttons
-    $('#newNoteBtn, #newNoteBtnSidebar, #newNoteBtnTop, #newNoteBtnEmpty').on('click', showAddNoteModal);
+    $('#newNoteBtnSidebar, #newNoteBtnTop, #newNoteBtnEmpty').on('click', showAddNoteModal);
     
     // Modal interactions
     $('#cancelBtn').on('click', closeNoteModal);
@@ -75,7 +137,7 @@ function setupEventListeners() {
  * Setup sidebar toggle functionality
  */
 function setupSidebar() {
-    $('#sidebarToggle, #sidebarToggleTop').on('click', function() {
+    $('#sidebarToggleTop').on('click', function() {
         $('#sidebar').toggleClass('sidebar-hidden sidebar-visible');
     });
     
@@ -83,7 +145,6 @@ function setupSidebar() {
     $(document).on('click', function(e) {
         if ($(window).width() < 1024) {
             if (!$(e.target).closest('#sidebar').length && 
-                !$(e.target).closest('#sidebarToggle').length && 
                 !$(e.target).closest('#sidebarToggleTop').length) {
                 $('#sidebar').removeClass('sidebar-visible').addClass('sidebar-hidden');
             }
@@ -109,8 +170,18 @@ function getListNotes() {
         },
         error: function(error) {
             console.error('Error fetching notes:', error);
-            $('#notesList').html(`<p class="text-red-500 col-span-full text-center">Failed to load notes. Please try again.</p>`);
+            $('#notesList').html(`
+                <div class="col-span-full p-8 bg-red-50 rounded-lg border border-red-200 text-center">
+                    <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-4"></i>
+                    <h3 class="text-xl font-bold text-red-700 mb-2">Connection Error</h3>
+                    <p class="text-red-600 mb-4">Failed to fetch notes from backend server.</p>
+                    <button id="retryFetch" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+                        Retry
+                    </button>
+                </div>
+            `);
             hideLoading();
+            $('#retryFetch').on('click', getListNotes);
         }
     });
 }
@@ -354,7 +425,7 @@ function showEditNoteModal(id) {
         },
         error: function(error) {
             console.error('Error fetching note details:', error);
-            alert('Failed to load note details. Please try again.');
+            showToast('Failed to load note details. Please try again.', 'error');
         }
     });
 }
@@ -379,12 +450,9 @@ function handleFormSubmit(e) {
     const content = $('#content').val().trim();
     const category = $('#category').val() || 'work';  // Default to 'work' if not selected
     
-    // Debug log
-    console.log('Form submission:', { noteId, title, content, category });
-    
     // Validate inputs
     if (!title || !content) {
-        alert('Please fill in all required fields.');
+        showToast('Please fill in all required fields.', 'error');
         return;
     }
     
@@ -393,9 +461,6 @@ function handleFormSubmit(e) {
         content,
         category
     };
-    
-    // Log the data we're sending
-    console.log('Submitting note data:', noteData);
     
     if (noteId) {
         // If noteId exists, it's an update
@@ -411,23 +476,19 @@ function handleFormSubmit(e) {
  * @param {Object} noteData - Note data object
  */
 function saveNote(noteData) {
-    // Log the specific AJAX call
-    console.log('Sending POST request to create note:', noteData);
-    
     $.ajax({
         url: `${API_URL}/notes`,
         method: 'POST',
         contentType: 'application/json',
         data: JSON.stringify(noteData),
         success: function(response) {
-            console.log('Note created successfully:', response);
             closeNoteModal();
             getListNotes();
-            alert('Note created successfully!');
+            showToast('Note created successfully!', 'success');
         },
         error: function(xhr, status, error) {
             console.error('Error creating note:', xhr.responseText);
-            alert('Failed to create note. Please check the console for details.');
+            showToast('Failed to create note. Please try again.', 'error');
         }
     });
 }
@@ -446,11 +507,11 @@ function editNote(id, noteData) {
         success: function(response) {
             closeNoteModal();
             getListNotes();
-            showToast('Note updated successfully!');
+            showToast('Note updated successfully!', 'success');
         },
         error: function(error) {
             console.error('Error updating note:', error);
-            alert('Failed to update note. Please try again.');
+            showToast('Failed to update note. Please try again.', 'error');
         }
     });
 }
@@ -485,11 +546,11 @@ function confirmDelete() {
         success: function(response) {
             closeDeleteModal();
             getListNotes();
-            showToast('Note deleted successfully!');
+            showToast('Note deleted successfully!', 'success');
         },
         error: function(error) {
             console.error('Error deleting note:', error);
-            alert('Failed to delete note. Please try again.');
+            showToast('Failed to delete note. Please try again.', 'error');
             closeDeleteModal();
         }
     });
@@ -498,11 +559,18 @@ function confirmDelete() {
 /**
  * Displays a toast notification
  * @param {string} message - Message to display
+ * @param {string} type - Type of toast (success, error)
  */
-function showToast(message) {
+function showToast(message, type = 'success') {
+    // Set colors based on type
+    let bgColor = 'bg-green-500';
+    if (type === 'error') {
+        bgColor = 'bg-red-500';
+    }
+    
     // Create toast element
     const toast = $(`
-        <div class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg transition-opacity duration-500">
+        <div class="fixed bottom-4 right-4 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg transition-opacity duration-500">
             ${message}
         </div>
     `);

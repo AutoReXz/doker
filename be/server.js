@@ -1,8 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
 import { initModels } from './models/index.js';
 import noteRoutes from './routes/noteRoutes.js';
 import migrateCategories from './utils/migrate-categories.js';
@@ -12,15 +11,11 @@ import os from 'os';
 // Load environment variables
 dotenv.config();
 
-// Get __dirname equivalent in ES Module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0'; // Listen on all interfaces by default
 
-// Enhanced CORS configuration to allow requests from any VM or local client
+// Enhanced CORS configuration to allow requests from any origin
 app.use(cors({
   origin: '*', // Allow all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -53,9 +48,6 @@ app.use(express.json({
     }
 }));
 
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, 'public')));
-
 // API routes
 app.use('/api', noteRoutes);
 
@@ -64,9 +56,16 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Route all other requests to index.html (for SPA functionality)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Root route to indicate this is an API server only
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Notes API Server',
+        version: '1.0.0',
+        endpoints: {
+            notes: '/api/notes',
+            health: '/health'
+        }
+    });
 });
 
 // MySQL error handling middleware - place this AFTER routes
@@ -106,7 +105,7 @@ const startServer = async () => {
         await migrateCategories();
         
         app.listen(PORT, HOST, () => {
-            console.log(`\n--- Server Information ---`);
+            console.log(`\n--- API Server Information ---`);
             console.log(`Server is running on http://${HOST}:${PORT}`);
             console.log(`Local access: http://localhost:${PORT}`);
             
@@ -117,11 +116,9 @@ const startServer = async () => {
                 ipAddresses.forEach(ip => {
                     console.log(`- http://${ip}:${PORT}`);
                 });
-                console.log('\nFRONTEND ACCESS OPTIONS:');
-                console.log('1. Local mode: Just use the "Connect to Local Backend" option');
-                console.log('2. Remote mode: Use one of these IP addresses with the backend port:');
+                console.log('\nAPI BASE URLs:');
                 ipAddresses.forEach(ip => {
-                    console.log(`   http://${ip}:${PORT}/api`);
+                    console.log(`- http://${ip}:${PORT}/api`);
                 });
             }
             
