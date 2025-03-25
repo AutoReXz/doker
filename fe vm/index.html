@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes App - VM Frontend</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .modal-open {
+            overflow: hidden;
+        }
+        .note-content {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .list-view {
+            grid-template-columns: 1fr !important;
+        }
+        .list-view .note-card {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+        .list-view .note-card > div {
+            width: 100%;
+        }
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+        .sidebar-visible {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Connection Configuration -->
+    <div id="connectionModal" class="fixed inset-0 bg-gray-800 bg-opacity-80 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Backend Connection</h2>
+            <p class="mb-4 text-gray-600">Choose how to connect to the backend:</p>
+            
+            <!-- Local backend option -->
+            <div class="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <h3 class="text-lg font-semibold text-blue-800 mb-2">Local Backend</h3>
+                <p class="text-blue-700 mb-3">Use if the backend is running on the same machine as this frontend.</p>
+                <button id="localModeBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg w-full">
+                    Connect to Local Backend
+                </button>
+            </div>
+            
+            <div class="mb-2">
+                <h3 class="text-lg font-semibold text-gray-700">Remote Backend</h3>
+                <p class="text-gray-600 mb-3">Use if connecting to a backend running on another machine:</p>
+            </div>
+            
+            <div class="mb-4">
+                <label for="backendHost" class="block text-gray-700 font-medium mb-2">Backend Host:</label>
+                <input type="text" id="backendHost" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="localhost" required>
+                <p class="text-sm text-gray-500 mt-1">Use your backend machine's IP address</p>
+            </div>
+            <div class="mb-6">
+                <label for="backendPort" class="block text-gray-700 font-medium mb-2">Backend Port:</label>
+                <input type="text" id="backendPort" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="3000" required>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button" id="connectBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">Connect to Remote Backend</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rest of the app - same as your original code -->
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <div id="sidebar" class="sidebar-hidden lg:sidebar-visible fixed lg:relative z-40 w-64 h-full bg-gray-800 text-white transition-all duration-300 transform -translate-x-full lg:translate-x-0 shadow-lg">
+            <!-- Sidebar content - same as original -->
+            <div class="flex items-center justify-center h-16 border-b border-gray-700">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-sticky-note text-yellow-400 text-xl"></i>
+                    <span class="text-xl font-semibold">Notes App (VM)</span>
+                </div>
+            </div>
+            
+            <div class="px-4 py-6">
+                <button id="newNoteBtnSidebar" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center space-x-2 mb-8">
+                    <i class="fas fa-plus"></i>
+                    <span>New Note</span>
+                </button>
+                
+                <div class="mb-6">
+                    <h2 class="text-lg font-semibold mb-2">Filter</h2>
+                    <div class="bg-gray-700 rounded-lg p-3">
+                        <input type="text" id="searchNotes" placeholder="Search notes..." class="w-full bg-gray-600 text-white placeholder-gray-400 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                
+                <div>
+                    <h2 class="text-lg font-semibold mb-2">Categories</h2>
+                    <ul class="space-y-2" id="categoriesList">
+                        <li>
+                            <a href="#" class="category-filter active flex items-center space-x-2 text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700" data-category="all">
+                                <i class="fas fa-layer-group"></i>
+                                <span>All Notes</span>
+                                <span class="ml-auto bg-gray-600 text-xs px-2 py-1 rounded-full" id="all-count">0</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="category-filter flex items-center space-x-2 text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700" data-category="work">
+                                <i class="fas fa-briefcase"></i>
+                                <span>Work</span>
+                                <span class="ml-auto bg-gray-600 text-xs px-2 py-1 rounded-full" id="work-count">0</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="category-filter flex items-center space-x-2 text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700" data-category="personal">
+                                <i class="fas fa-user"></i>
+                                <span>Personal</span>
+                                <span class="ml-auto bg-gray-600 text-xs px-2 py-1 rounded-full" id="personal-count">0</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="category-filter flex items-center space-x-2 text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700" data-category="study">
+                                <i class="fas fa-book"></i>
+                                <span>Study</span>
+                                <span class="ml-auto bg-gray-600 text-xs px-2 py-1 rounded-full" id="study-count">0</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="absolute bottom-0 w-full p-4 border-t border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                            <span class="font-semibold text-sm">VM</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium">VM Frontend</p>
+                            <p id="connectionStatus" class="text-xs text-green-400">Connected</p>
+                        </div>
+                    </div>
+                    <button id="reconnectBtn" class="text-blue-400 hover:text-blue-300 text-sm">
+                        <i class="fas fa-sync"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top Navigation Bar -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="px-4 sm:px-6 lg:px-8 py-4">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <button id="sidebarToggleTop" class="lg:hidden mr-3 text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-bars text-xl"></i>
+                            </button>
+                            <h1 class="text-2xl font-bold text-gray-800" id="currentCategory">All Notes</h1>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <div class="hidden sm:flex relative">
+                                <input type="text" id="searchNotesTop" placeholder="Search notes..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <div class="absolute left-3 top-2.5 text-gray-400">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                            </div>
+                            <button id="viewToggleBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-lg">
+                                <i class="fas fa-th-large"></i>
+                            </button>
+                            <button id="newNoteBtnTop" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center space-x-2">
+                                <i class="fas fa-plus"></i>
+                                <span class="hidden sm:inline">New Note</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Main Content Area -->
+            <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
+                <div id="notesContainer" class="mb-8">
+                    <!-- Note stats row -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-white rounded-lg shadow p-4 flex items-center">
+                            <div class="rounded-full bg-blue-100 p-3 mr-4">
+                                <i class="fas fa-sticky-note text-blue-600"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 text-sm">Total Notes</p>
+                                <p class="text-xl font-bold" id="totalNotesCount">0</p>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-4 flex items-center">
+                            <div class="rounded-full bg-green-100 p-3 mr-4">
+                                <i class="fas fa-clock text-green-600"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 text-sm">Recent Updates</p>
+                                <p class="text-xl font-bold" id="recentUpdatesCount">0</p>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-4 flex items-center">
+                            <div class="rounded-full bg-purple-100 p-3 mr-4">
+                                <i class="fas fa-layer-group text-purple-600"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 text-sm">Categories</p>
+                                <p class="text-xl font-bold" id="categoriesCount">3</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes List -->
+                    <div id="notesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Notes will be loaded here dynamically -->
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="emptyState" class="hidden flex flex-col items-center justify-center py-12">
+                        <div class="text-gray-400 mb-4">
+                            <i class="fas fa-sticky-note text-6xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-700 mb-2">No notes found</h3>
+                        <p class="text-gray-500 mb-6">Get started by creating your first note</p>
+                        <button id="newNoteBtnEmpty" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg flex items-center space-x-2">
+                            <i class="fas fa-plus"></i>
+                            <span>New Note</span>
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Add/Edit Note Modal -->
+    <div id="noteModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
+            <div class="p-6">
+                <h2 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-4">Add New Note</h2>
+                <form id="noteForm">
+                    <input type="hidden" id="noteId">
+                    <div class="mb-4">
+                        <label for="title" class="block text-gray-700 font-medium mb-2">Title</label>
+                        <input type="text" id="title" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="category" class="block text-gray-700 font-medium mb-2">Category</label>
+                        <select id="category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="work">Work</option>
+                            <option value="personal">Personal</option>
+                            <option value="study">Study</option>
+                        </select>
+                    </div>
+                    <div class="mb-6">
+                        <label for="content" class="block text-gray-700 font-medium mb-2">Content</label>
+                        <textarea id="content" rows="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" id="cancelBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg">Cancel</button>
+                        <button type="submit" id="saveBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">Save Note</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Confirm Delete</h2>
+                <p class="text-gray-600 mb-6">Are you sure you want to delete this note? This action cannot be undone.</p>
+                <input type="hidden" id="deleteNoteId">
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancelDeleteBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg">Cancel</button>
+                    <button type="button" id="confirmDeleteBtn" class="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="vm-script.js"></script>
+</body>
+</html>

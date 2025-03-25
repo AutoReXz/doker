@@ -1,0 +1,146 @@
+/* Card animations and effects */
+.note-card {
+    transition: all 0.3s ease;
+}
+
+.note-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Modal styling */
+.modal-open {
+    overflow: hidden;
+}
+
+/* Text truncation */
+.note-content {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Button effects */
+.btn-icon {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    transform: scale(1.1);
+}
+
+/* Sidebar styling */
+.sidebar-visible {
+    transform: translateX(0) !important;
+}
+
+.sidebar-hidden {
+    transform: translateX(-100%) !important;
+}
+
+@media (min-width: 1024px) {
+    .lg\:sidebar-visible {
+        transform: translateX(0) !important;
+    }
+}
+
+/* Category filter active state */
+.category-filter.active {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: white;
+}
+
+/* List view styles */
+.list-view {
+    grid-template-columns: 1fr !important;
+}
+
+.list-view .note-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.list-view .note-card .card-content {
+    flex: 1;
+    padding: 1rem;
+}
+
+.list-view .note-card .card-actions {
+    padding: 0 1rem;
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Toast notification */
+.toast-notification {
+    animation: slideIn 0.5s forwards, slideOut 0.5s 2.5s forwards;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+    from { transform: translateY(0); opacity: 1; }
+    to { transform: translateY(100%); opacity: 0; }
+}
+
+/* Loading spinner with gradient */
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0%, transparent 50%, #3b82f6 50%, #3b82f6 100%);
+    animation: spin 1s linear infinite;
+    position: relative;
+}
+
+.loading-spinner::before {
+    content: "";
+    position: absolute;
+    width: 80%;
+    height: 80%;
+    background-color: white;
+    border-radius: 50%;
+    top: 10%;
+    left: 10%;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a0a0a0;
+}
