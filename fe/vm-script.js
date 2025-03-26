@@ -31,9 +31,13 @@ function connectToBackend() {
         </div>
     `);
     
+    // Debug message
+    console.log('Attempting to connect to API at:', API_URL);
+    
     // Test connection and load notes
     testConnection()
-        .then(() => {
+        .then((response) => {
+            console.log('Connection successful, response:', response);
             // Load notes
             getListNotes();
             // Update status
@@ -42,6 +46,7 @@ function connectToBackend() {
             connectionAttempts = 0;
         })
         .catch(err => {
+            console.error('Connection error details:', err);
             connectionAttempts++;
             console.error('Connection failed:', err);
             if (connectionAttempts < 3) {
@@ -73,10 +78,14 @@ function connectToBackend() {
  * Test connection to the backend
  */
 function testConnection() {
+    console.log('Testing connection to:', `${API_URL}/notes`);
     return $.ajax({
         url: `${API_URL}/notes`,
         method: 'GET',
         timeout: 5000,
+        headers: {
+            'Accept': 'application/json',
+        }
     });
 }
 

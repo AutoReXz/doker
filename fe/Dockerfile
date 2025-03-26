@@ -1,18 +1,20 @@
-FROM nginx:alpine
+FROM node:18-alpine
 
-# Create directories for the application
-WORKDIR /usr/share/nginx/html
+# Create app directory
+WORKDIR /frontend/
 
-# Copy frontend files to the container
-COPY index.html .
-COPY vm-script.js .
-COPY utils.js .
+# Copy package.json and install dependencies first (for better caching)
+COPY package.json /frontend/
+RUN npm install
 
-# Configure Nginx (optional, use default config for now)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy all frontend files to the container
+COPY . /frontend/
 
-# Expose port 80
-EXPOSE 80
+# Expose port for the app
+EXPOSE 3000
 
-# Use the default Nginx command
-CMD ["nginx", "-g", "daemon off;"]
+# Set environment variables for production
+ENV NODE_ENV=production
+
+# Start the app
+CMD ["npm", "start"]
