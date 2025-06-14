@@ -18,7 +18,7 @@ app.use((req, res, next) => {
 
 // Proxy API requests to the backend
 app.use('/api', createProxyMiddleware({
-  target: 'https://doker-263444552508.us-central1.run.app',
+  target: 'http://notes-backend-container:3000',
   changeOrigin: true,
   pathRewrite: {
     '^/api': '/api', // This keeps the /api prefix
@@ -43,6 +43,6 @@ app.get('*', (req, res) => {
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`API proxy configured to: https://doker-263444552508.us-central1.run.app/api`);
+  console.log(`API proxy configured to: http://notes-backend-container:3000/api`);
   console.log(`Open http://localhost:${PORT} in your browser`);
 });

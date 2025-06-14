@@ -1,5 +1,5 @@
 const API_CONFIG = {
-  DEFAULT_URL: 'https://doker-263444552508.us-central1.run.app/api',
+  DEFAULT_URL: '/api',
   
   // Get the API URL
   getApiUrl: function() {
